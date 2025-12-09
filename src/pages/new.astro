@@ -107,12 +107,6 @@ import config from '@/lib/config';
 </Layout>
 
 <script>
-	// Check if logged in
-	const isLoggedIn = localStorage.getItem('pbnj_logged_in');
-	if (!isLoggedIn) {
-		window.location.href = '/login?return=' + encodeURIComponent('/new');
-	}
-
 	const codeInput = document.getElementById('code-input') as HTMLTextAreaElement;
 	const nameInput = document.getElementById('name') as HTMLInputElement;
 	const filenameInput = document.getElementById('filename') as HTMLInputElement;

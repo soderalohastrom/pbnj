@@ -2,7 +2,6 @@
 import Layout from '@/layouts/Layout.astro';
 import config from '@/lib/config';
 import hljs from 'highlight.js';
-import { isAuthenticated } from '@/lib/auth';
 
 // Fetch pastes from D1 database (only if homepage is enabled)
 const runtime = Astro.locals.runtime as any;
@@ -10,15 +9,11 @@ let pastes: any[] = [];
 
 if (config.homepage) {
 	try {
-		// Check if user is authenticated (via session cookie or Bearer token)
-		const isAuthed = await isAuthenticated(Astro.request, runtime.env.DB, runtime.env.AUTH_KEY);
-
 		const sortDirection = config.sortOrder === 'oldest' ? 'ASC' : 'DESC';
 
-		// If authenticated, show all pastes including private ones
-		const whereClause = isAuthed ? '' : 'WHERE is_private = 0 OR is_private IS NULL';
+		// Show all pastes (public and private)
 		const { results } = await runtime.env.DB.prepare(
-			`SELECT id, language, updated, filename, name, is_private, SUBSTR(code, 1, 200) as preview FROM pastes ${whereClause} ORDER BY updated ${sortDirection} LIMIT 20`
+			`SELECT id, language, updated, filename, name, is_private, SUBSTR(code, 1, 200) as preview FROM pastes ORDER BY updated ${sortDirection} LIMIT 20`
 		).all();
 
 		pastes = results || [];

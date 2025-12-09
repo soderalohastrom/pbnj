@@ -1,20 +1,10 @@
 import type { APIRoute } from 'astro';
-import { isAuthenticated } from '@/lib/auth';
 
 // PUT /api/:id - Update paste
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {
     const { id } = params;
     const runtime = locals.runtime as any;
-
-    // Check authentication (session cookie or Bearer token)
-    const isAuthed = await isAuthenticated(request, runtime.env.DB, runtime.env.AUTH_KEY);
-    if (!isAuthed) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     const body = await request.json();
     const { code, language, filename, name } = body;
@@ -69,15 +59,6 @@ export const DELETE: APIRoute = async ({ params, request, locals }) => {
   try {
     const { id } = params;
     const runtime = locals.runtime as any;
-
-    // Check authentication (session cookie or Bearer token)
-    const isAuthed = await isAuthenticated(request, runtime.env.DB, runtime.env.AUTH_KEY);
-    if (!isAuthed) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     // Delete the paste
     const result = await runtime.env.DB.prepare(
