@@ -6,6 +6,17 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     const { id } = params;
     const runtime = locals.runtime as any;
 
+    if (!runtime || !runtime.env || !runtime.env.DB) {
+      console.error('Runtime or DB binding not available. locals.runtime:', locals.runtime);
+      return new Response(
+        JSON.stringify({ error: 'Database connection failed - server misconfiguration' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const body = await request.json();
     const { code, language, filename, name } = body;
 
