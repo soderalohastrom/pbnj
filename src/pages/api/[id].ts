@@ -17,7 +17,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     }
 
     const body = await request.json();
-    const { code, language, filename } = body;
+    const { code, language, filename, name } = body;
 
     if (!code) {
       return new Response(JSON.stringify({ error: 'Code is required' }), {
@@ -29,9 +29,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     // Update the paste and timestamp
     const updated = Date.now();
     const result = await runtime.env.DB.prepare(
-      'UPDATE pastes SET code = ?, language = COALESCE(?, language), filename = COALESCE(?, filename), updated = ? WHERE id = ?'
+      'UPDATE pastes SET code = ?, language = COALESCE(?, language), filename = COALESCE(?, filename), name = COALESCE(?, name), updated = ? WHERE id = ?'
     )
-      .bind(code, language || null, filename || null, updated, id)
+      .bind(code, language || null, filename || null, name || null, updated, id)
       .run();
 
     if (result.meta.changes === 0) {
