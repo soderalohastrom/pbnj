@@ -13,7 +13,9 @@ binding = "DB"
 database_name = "pbnj-db"
 database_id = "5311b308-33e6-4488-90f5-4a3ed67078e2"
 
-# Environment variables (set AUTH_KEY in Cloudflare dashboard or .dev.vars locally)
+# Environment variables and secrets
+# AUTH_KEY is a secret set in Cloudflare dashboard (or .dev.vars locally for development)
+vars = {}
 
 # Observability
 [observability]
