@@ -1,15 +1,8 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import config from '@/lib/config';
-import { isAuthenticated } from '@/lib/auth';
 
 const { id } = Astro.params;
-
-// Check if logged in
-const isAuthed = await isAuthenticated(Astro.request, Astro.locals.runtime.env.DB, Astro.locals.runtime.env.AUTH_KEY);
-if (!isAuthed) {
-	return Astro.redirect('/login?return=' + encodeURIComponent(`/edit/${id}`));
-}
 
 // Fetch paste from D1 database
 const runtime = Astro.locals.runtime as any;
