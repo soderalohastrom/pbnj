@@ -48,10 +48,20 @@ const codePreview = paste.code.slice(0, 150).replace(/\n/g, ' ').trim() + (paste
 
 <Layout title={filename} description={codePreview}>
 	<div class="max-w-6xl mx-auto pb-12">
+		<!-- Paste name heading -->
+		{paste.name && (
+			<div class="mb-4">
+				<a href={`/edit/${id}`} class="text-2xl sm:text-3xl font-bold text-paper-text hover:text-paper-text/80 transition-colors">
+					{paste.name}
+				</a>
+			</div>
+		)}
+
+		<!-- Info row -->
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<h1 class="text-xl sm:text-2xl font-medium text-paper-text truncate">
+			<h2 class="text-sm text-paper-muted truncate">
 				{paste.filename || id}
-			</h1>
+			</h2>
 
 			<!-- Desktop buttons -->
 			<div class="hidden sm:flex gap-3 flex-shrink-0">

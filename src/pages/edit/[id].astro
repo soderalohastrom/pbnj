@@ -1,9 +1,44 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import config from '@/lib/config';
+import { isAuthenticated } from '@/lib/auth';
+
+const { id } = Astro.params;
+
+// Check if logged in
+const isAuthed = await isAuthenticated(Astro.request, Astro.locals.runtime.env.DB, Astro.locals.runtime.env.AUTH_KEY);
+if (!isAuthed) {
+	return Astro.redirect('/login?return=' + encodeURIComponent(`/edit/${id}`));
+}
+
+// Fetch paste from D1 database
+const runtime = Astro.locals.runtime as any;
+let paste: any = null;
+
+try {
+	const result = await runtime.env.DB.prepare(
+		'SELECT * FROM pastes WHERE id = ?'
+	).bind(id).first();
+
+	paste = result;
+} catch (error) {
+	console.error('Error fetching paste:', error);
+}
+
+if (!paste) {
+	return Astro.redirect('/404');
+}
+
+// Check if paste requires a key (secret pastes are editable only by knowing the key)
+if (paste.secret_key) {
+	const providedKey = Astro.url.searchParams.get('key');
+	if (providedKey !== paste.secret_key) {
+		return Astro.redirect('/404');
+	}
+}
 ---
 
-<Layout title={`New Paste - ${config.name}`}>
+<Layout title={`Edit - ${config.name}`}>
 	<div class="max-w-6xl mx-auto pb-12">
 		<!-- Paste name input -->
 		<div class="mb-4">
@@ -12,6 +47,7 @@ import config from '@/lib/config';
 				id="name"
 				class="w-full text-2xl sm:text-3xl font-bold text-paper-text"
 				placeholder="Give your paste a name..."
+				value={paste.name || ''}
 				style="outline: none; border: none; background: transparent; padding: 0;"
 			/>
 		</div>
@@ -24,6 +60,7 @@ import config from '@/lib/config';
 				id="filename"
 				class="text-sm text-paper-muted truncate"
 				placeholder="filename (optional)"
+				value={paste.filename || ''}
 				style="outline: none; border: none; flex: 1; min-width: 0; background: transparent;"
 			/>
 
@@ -80,9 +117,9 @@ import config from '@/lib/config';
 
 				<!-- Save button -->
 				<button
-					id="create-btn"
+					id="save-btn"
 					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
-					title="Save paste"
+					title="Save changes"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -90,6 +127,18 @@ import config from '@/lib/config';
 						<polyline points="7 3 7 8 15 8"></polyline>
 					</svg>
 				</button>
+
+				<!-- Cancel button -->
+				<a
+					href={`/${id}`}
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Cancel editing"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+				</a>
 			</div>
 		</div>
 
@@ -101,18 +150,12 @@ import config from '@/lib/config';
 				placeholder="paste your code here..."
 				spellcheck="false"
 				style="min-height: 480px; padding: 1.5rem; outline: none; line-height: 1.625; font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 0.875rem;"
-			></textarea>
+			>{paste.code}</textarea>
 		</div>
 	</div>
 </Layout>
 
-<script>
-	// Check if logged in
-	const isLoggedIn = localStorage.getItem('pbnj_logged_in');
-	if (!isLoggedIn) {
-		window.location.href = '/login?return=' + encodeURIComponent('/new');
-	}
-
+<script define:vars={{ pasteId: id, pasteLanguage: paste.language, pasteIsPrivate: paste.is_private }}>
 	const codeInput = document.getElementById('code-input') as HTMLTextAreaElement;
 	const nameInput = document.getElementById('name') as HTMLInputElement;
 	const filenameInput = document.getElementById('filename') as HTMLInputElement;
@@ -120,12 +163,17 @@ import config from '@/lib/config';
 	const privateBtn = document.getElementById('private-btn') as HTMLButtonElement;
 	const lockOpen = document.getElementById('lock-open') as SVGElement;
 	const lockClosed = document.getElementById('lock-closed') as SVGElement;
-	const createBtn = document.getElementById('create-btn') as HTMLButtonElement;
+	const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
 	const editorWrapper = document.getElementById('editor-wrapper') as HTMLDivElement;
 
-	let isPrivate = false;
+	let isPrivate = pasteIsPrivate === 1;
 
-	// Update private button style - just toggle icons, keep same bg as other buttons
+	// Set initial language value
+	if (pasteLanguage) {
+		languageSelect.value = pasteLanguage;
+	}
+
+	// Update private button style
 	function updatePrivateButton() {
 		if (isPrivate) {
 			lockOpen.style.display = 'none';
@@ -158,7 +206,7 @@ import config from '@/lib/config';
 		}, 2000);
 	}
 
-	async function createPaste() {
+	async function savePaste() {
 		const code = codeInput.value;
 		if (!code.trim()) {
 			showError();
@@ -166,8 +214,8 @@ import config from '@/lib/config';
 			return;
 		}
 
-		createBtn.style.opacity = '0.5';
-		createBtn.style.pointerEvents = 'none';
+		saveBtn.style.opacity = '0.5';
+		saveBtn.style.pointerEvents = 'none';
 
 		try {
 			const body: Record<string, any> = { code };
@@ -185,8 +233,8 @@ import config from '@/lib/config';
 				body.private = true;
 			}
 
-			const response = await fetch('/api', {
-				method: 'POST',
+			const response = await fetch(`/api/${pasteId}`, {
+				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -196,25 +244,24 @@ import config from '@/lib/config';
 
 			if (!response.ok) {
 				const data = await response.json().catch(() => ({}));
-				throw new Error(data.error || 'Failed to create paste');
+				throw new Error(data.error || 'Failed to save paste');
 			}
 
-			const data = await response.json();
-			window.location.href = `/${data.id}`;
+			window.location.href = `/${pasteId}`;
 		} catch (err: any) {
 			showError();
-			createBtn.style.opacity = '1';
-			createBtn.style.pointerEvents = 'auto';
+			saveBtn.style.opacity = '1';
+			saveBtn.style.pointerEvents = 'auto';
 		}
 	}
 
-	createBtn.addEventListener('click', createPaste);
+	saveBtn.addEventListener('click', savePaste);
 
 	// Ctrl/Cmd + Enter or Ctrl/Cmd + S to submit
 	codeInput.addEventListener('keydown', (e) => {
 		if ((e.ctrlKey || e.metaKey) && (e.key === 'Enter' || e.key === 's')) {
 			e.preventDefault();
-			createPaste();
+			savePaste();
 		}
 	});
 
@@ -222,7 +269,7 @@ import config from '@/lib/config';
 	document.addEventListener('keydown', (e) => {
 		if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 			e.preventDefault();
-			createPaste();
+			savePaste();
 		}
 	});
 
