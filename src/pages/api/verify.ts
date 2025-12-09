@@ -5,6 +5,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const runtime = locals.runtime as any;
 
+    if (!runtime || !runtime.env || !runtime.env.AUTH_KEY) {
+      console.error('Runtime or AUTH_KEY not available. locals.runtime:', locals.runtime);
+      return new Response(
+        JSON.stringify({ error: 'Auth configuration failed - server misconfiguration' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Check authentication
     const authHeader = request.headers.get('Authorization');
     const expectedAuth = `Bearer ${runtime.env.AUTH_KEY}`;
