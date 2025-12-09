@@ -159,6 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let code: string;
     let language: string | undefined;
     let filename: string | undefined;
+    let name: string | undefined;
     let isPrivate = false;
     let secretKey: string | null = null;
 
@@ -180,6 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Read file content
       code = await file.text();
       filename = file.name;
+      name = formData.get('name') as string | null || undefined;
 
       // Detect language from filename or use provided language
       const providedLanguage = formData.get('language') as string | null;
@@ -198,6 +200,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       code = body.code;
       language = body.language;
       filename = body.filename;
+      name = body.name;
       isPrivate = body.private === true;
 
       // Handle key: true (auto-generate) or key: "custom-key"
@@ -251,9 +254,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       try {
         await runtime.env.DB.prepare(
-          'INSERT INTO pastes (id, code, language, updated, filename, is_private, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO pastes (id, code, language, updated, filename, name, is_private, secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
         )
-          .bind(id, code, lang, updated, filename, isPrivate ? 1 : 0, secretKey)
+          .bind(id, code, lang, updated, filename, name || null, isPrivate ? 1 : 0, secretKey)
           .run();
 
         // Success - return the response
