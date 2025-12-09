@@ -5,14 +5,25 @@ import config from '@/lib/config';
 
 <Layout title={`New Paste - ${config.name}`}>
 	<div class="max-w-6xl mx-auto pb-12">
+		<!-- Paste name input -->
+		<div class="mb-4">
+			<input
+				type="text"
+				id="name"
+				class="w-full text-2xl sm:text-3xl font-bold text-paper-text"
+				placeholder="Give your paste a name..."
+				style="outline: none; border: none; background: transparent; padding: 0;"
+			/>
+		</div>
+
 		<!-- Header row -->
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<!-- Editable title -->
+			<!-- Filename input -->
 			<input
 				type="text"
 				id="filename"
-				class="text-xl sm:text-2xl font-medium text-paper-text truncate"
-				placeholder="snippet"
+				class="text-sm text-paper-muted truncate"
+				placeholder="filename (optional)"
 				style="outline: none; border: none; flex: 1; min-width: 0; background: transparent;"
 			/>
 
@@ -103,6 +114,7 @@ import config from '@/lib/config';
 	}
 
 	const codeInput = document.getElementById('code-input') as HTMLTextAreaElement;
+	const nameInput = document.getElementById('name') as HTMLInputElement;
 	const filenameInput = document.getElementById('filename') as HTMLInputElement;
 	const languageSelect = document.getElementById('language') as HTMLSelectElement;
 	const privateBtn = document.getElementById('private-btn') as HTMLButtonElement;
@@ -160,6 +172,9 @@ import config from '@/lib/config';
 		try {
 			const body: Record<string, any> = { code };
 
+			if (nameInput.value.trim()) {
+				body.name = nameInput.value.trim();
+			}
 			if (filenameInput.value.trim()) {
 				body.filename = filenameInput.value.trim();
 			}
@@ -220,8 +235,13 @@ import config from '@/lib/config';
 		color: var(--paper-muted);
 	}
 
+	#name::placeholder {
+		color: var(--paper-muted);
+		opacity: 1;
+	}
+
 	#filename::placeholder {
-		color: var(--paper-text);
+		color: var(--paper-muted);
 		opacity: 1;
 	}
 
