@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { generateId } from '@/lib/id';
 import config, { parseSize } from '@/lib/config';
-import { isAuthenticated } from '@/lib/auth';
 
 // Detect language from filename extension
 function detectLanguage(filename: string): string {
@@ -105,19 +104,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
 };
 
-// DELETE /api - Delete all pastes (requires auth)
+// DELETE /api - Delete all pastes
 export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
     const runtime = locals.runtime as any;
-
-    // Check authentication (session cookie or Bearer token)
-    const isAuthed = await isAuthenticated(request, runtime.env.DB, runtime.env.AUTH_KEY);
-    if (!isAuthed) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     // Delete all pastes
     await runtime.env.DB.prepare('DELETE FROM pastes').run();
@@ -146,15 +136,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Get runtime from Astro locals (Cloudflare binding)
     const runtime = locals.runtime as any;
-
-    // Check authentication (session cookie or Bearer token)
-    const isAuthed = await isAuthenticated(request, runtime.env.DB, runtime.env.AUTH_KEY);
-    if (!isAuthed) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     let code: string;
     let language: string | undefined;

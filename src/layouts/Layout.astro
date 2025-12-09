@@ -48,52 +48,13 @@ const hljsStylePath = `/styles/hljs-${config.theme}.css`;
 					<img src={config.logo} alt={config.name} class="h-8 w-auto" loading="eager" />
 				</a>
 				<div class="flex items-center gap-3">
-					<!-- New paste button (only visible when logged in) -->
-					<a id="new-paste-btn" href="/new" class="hover:opacity-70 transition-opacity" title="New paste" style="display: none;">
+					<!-- New paste button -->
+					<a href="/new" class="hover:opacity-70 transition-opacity" title="New paste">
 						<img src={config.icons.newPaste} alt="New paste" class="h-8 w-auto" loading="eager" />
 					</a>
-					<!-- Auth button: login/logout -->
-					<button id="auth-btn" class="hover:opacity-70 transition-opacity" title="Login" data-login-icon={config.icons.login} data-logout-icon={config.icons.logout}>
-						<img id="auth-img" src={config.icons.login} alt="Login" class="h-8 w-auto" loading="eager" />
-					</button>
 				</div>
 			</div>
 		</header>
-		<script is:inline>
-			(function() {
-				const authBtn = document.getElementById('auth-btn');
-				const authImg = document.getElementById('auth-img');
-				const newPasteBtn = document.getElementById('new-paste-btn');
-				const loginIcon = authBtn.dataset.loginIcon;
-				const logoutIcon = authBtn.dataset.logoutIcon;
-				const isLoggedIn = localStorage.getItem('pbnj_logged_in');
-
-				if (isLoggedIn) {
-					authImg.src = logoutIcon;
-					authImg.alt = 'Logout';
-					authBtn.title = 'Logout';
-					newPasteBtn.style.display = 'block';
-				}
-
-				authBtn.addEventListener('click', async () => {
-					if (localStorage.getItem('pbnj_logged_in')) {
-						// Call logout API to clear session
-						await fetch('/api/auth/logout', { method: 'POST' });
-						localStorage.removeItem('pbnj_logged_in');
-						authImg.src = loginIcon;
-						authImg.alt = 'Login';
-						authBtn.title = 'Login';
-						newPasteBtn.style.display = 'none';
-						// Reload to refresh any auth-dependent content
-						window.location.reload();
-					} else {
-						// Store current page to return after login
-						const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-						window.location.href = '/login?return=' + returnUrl;
-					}
-				});
-			})();
-		</script>
 		<main class="sm:pt-16 px-8 max-w-[1600px] w-full mx-auto flex-1">
 			<slot />
 		</main>
