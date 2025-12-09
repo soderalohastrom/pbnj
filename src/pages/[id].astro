@@ -1,0 +1,341 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import hljs from 'highlight.js';
+
+const { id } = Astro.params;
+
+// Fetch paste from D1 database
+const runtime = Astro.locals.runtime as any;
+let paste: any = null;
+
+try {
+	const result = await runtime.env.DB.prepare(
+		'SELECT * FROM pastes WHERE id = ?'
+	).bind(id).first();
+
+	paste = result;
+} catch (error) {
+	console.error('Error fetching paste:', error);
+}
+
+if (!paste) {
+	return Astro.redirect('/404');
+}
+
+// Check if paste requires a key
+if (paste.secret_key) {
+	const providedKey = Astro.url.searchParams.get('key');
+	if (providedKey !== paste.secret_key) {
+		return Astro.redirect('/404');
+	}
+}
+
+// Highlight code server-side
+let highlightedCode: string;
+try {
+	const result = hljs.highlight(paste.code, { language: paste.language });
+	highlightedCode = result.value;
+} catch {
+	// Fallback to auto-detection if language not supported
+	const result = hljs.highlightAuto(paste.code);
+	highlightedCode = result.value;
+}
+
+// Prepare OG metadata
+const filename = paste.filename || id;
+const codePreview = paste.code.slice(0, 150).replace(/\n/g, ' ').trim() + (paste.code.length > 150 ? '...' : '');
+---
+
+<Layout title={filename} description={codePreview}>
+	<div class="max-w-6xl mx-auto pb-12">
+		<div class="mb-3 flex items-center justify-between gap-3">
+			<h1 class="text-xl sm:text-2xl font-medium text-paper-text truncate">
+				{paste.filename || id}
+			</h1>
+
+			<!-- Desktop buttons -->
+			<div class="hidden sm:flex gap-3 flex-shrink-0">
+				<a
+					href={`/r/${id}`}
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="View raw text"
+					aria-label="View raw text"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+						<line x1="16" y1="13" x2="8" y2="13"></line>
+						<line x1="16" y1="17" x2="8" y2="17"></line>
+						<polyline points="10 9 9 9 8 9"></polyline>
+					</svg>
+				</a>
+				<button
+					id="copy-link-btn"
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Copy link"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+						<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+					</svg>
+				</button>
+				<button
+					id="copy-btn"
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Copy to clipboard"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+						<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+					</svg>
+				</button>
+				<button
+					id="download-btn"
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Download file"
+					data-filename={filename}
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="7 10 12 15 17 10"></polyline>
+						<line x1="12" y1="15" x2="12" y2="3"></line>
+					</svg>
+				</button>
+				<button
+					id="delete-btn"
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Delete paste"
+					data-id={id}
+					style="display: none;"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<polyline points="3 6 5 6 21 6"></polyline>
+						<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+						<line x1="10" y1="11" x2="10" y2="17"></line>
+						<line x1="14" y1="11" x2="14" y2="17"></line>
+					</svg>
+				</button>
+			</div>
+
+			<!-- Mobile menu -->
+			<div class="relative sm:hidden flex-shrink-0">
+				<button
+					id="menu-btn"
+					class="p-2 text-paper-text bg-paper-bg2 border border-paper-border rounded hover:border-paper-border-hover transition-colors"
+					title="Actions"
+					aria-label="Open actions menu"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="1"></circle>
+						<circle cx="12" cy="5" r="1"></circle>
+						<circle cx="12" cy="19" r="1"></circle>
+					</svg>
+				</button>
+				<div id="menu-dropdown" class="hidden absolute right-0 top-full mt-1 bg-paper-bg border border-paper-border rounded shadow-lg z-50 min-w-[160px]">
+					<a
+						href={`/r/${id}`}
+						class="flex items-center gap-3 px-4 py-2 text-paper-text hover:bg-paper-bg2 transition-colors"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+							<line x1="16" y1="13" x2="8" y2="13"></line>
+							<line x1="16" y1="17" x2="8" y2="17"></line>
+							<polyline points="10 9 9 9 8 9"></polyline>
+						</svg>
+						Raw
+					</a>
+					<button
+						id="mobile-copy-link-btn"
+						class="flex items-center gap-3 px-4 py-2 text-paper-text hover:bg-paper-bg2 transition-colors w-full text-left"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+							<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+						</svg>
+						Copy Link
+					</button>
+					<button
+						id="mobile-copy-btn"
+						class="flex items-center gap-3 px-4 py-2 text-paper-text hover:bg-paper-bg2 transition-colors w-full text-left"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+						</svg>
+						Copy Code
+					</button>
+					<button
+						id="mobile-download-btn"
+						class="flex items-center gap-3 px-4 py-2 text-paper-text hover:bg-paper-bg2 transition-colors w-full text-left"
+						data-filename={filename}
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+							<polyline points="7 10 12 15 17 10"></polyline>
+							<line x1="12" y1="15" x2="12" y2="3"></line>
+						</svg>
+						Download
+					</button>
+					<button
+						id="mobile-delete-btn"
+						class="flex items-center gap-3 px-4 py-2 text-paper-text hover:bg-paper-bg2 transition-colors w-full text-left"
+						data-id={id}
+						style="display: none;"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<polyline points="3 6 5 6 21 6"></polyline>
+							<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+							<line x1="10" y1="11" x2="10" y2="17"></line>
+							<line x1="14" y1="11" x2="14" y2="17"></line>
+						</svg>
+						Delete
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="border border-paper-border rounded overflow-hidden code-block bg-paper-bg2">
+			<pre class="bg-paper-bg2"><code class="hljs" set:html={highlightedCode} /></pre>
+		</div>
+	</div>
+
+	<script is:inline>
+		// Show delete buttons if logged in
+		const isLoggedIn = localStorage.getItem('pbnj_logged_in');
+		if (isLoggedIn) {
+			const deleteBtn = document.getElementById('delete-btn');
+			const mobileDeleteBtn = document.getElementById('mobile-delete-btn');
+			if (deleteBtn) deleteBtn.style.display = 'block';
+			if (mobileDeleteBtn) mobileDeleteBtn.style.display = 'flex';
+		}
+
+		// Mobile menu toggle
+		const menuBtn = document.getElementById('menu-btn');
+		const menuDropdown = document.getElementById('menu-dropdown');
+
+		menuBtn?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			menuDropdown?.classList.toggle('hidden');
+		});
+
+		// Close menu when clicking outside
+		document.addEventListener('click', () => {
+			menuDropdown?.classList.add('hidden');
+		});
+
+		menuDropdown?.addEventListener('click', (e) => {
+			e.stopPropagation();
+		});
+
+		// Copy code (desktop + mobile)
+		function copyCode() {
+			const code = document.querySelector('pre code')?.textContent;
+			if (code) {
+				navigator.clipboard.writeText(code);
+			}
+			menuDropdown?.classList.add('hidden');
+		}
+
+		document.getElementById('copy-btn')?.addEventListener('click', () => {
+			copyCode();
+			const btn = document.getElementById('copy-btn');
+			const icon = btn?.querySelector('svg');
+			if (icon) {
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>';
+				setTimeout(() => {
+					icon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+				}, 2000);
+			}
+		});
+
+		document.getElementById('mobile-copy-btn')?.addEventListener('click', copyCode);
+
+		// Copy link (desktop + mobile)
+		function copyLink() {
+			navigator.clipboard.writeText(window.location.href);
+			menuDropdown?.classList.add('hidden');
+		}
+
+		document.getElementById('copy-link-btn')?.addEventListener('click', () => {
+			copyLink();
+			const btn = document.getElementById('copy-link-btn');
+			const icon = btn?.querySelector('svg');
+			if (icon) {
+				icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>';
+				setTimeout(() => {
+					icon.innerHTML = '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>';
+				}, 2000);
+			}
+		});
+
+		document.getElementById('mobile-copy-link-btn')?.addEventListener('click', copyLink);
+
+		// Download (desktop + mobile)
+		function downloadFile(btn) {
+			const code = document.querySelector('pre code')?.textContent;
+			const filename = btn?.dataset.filename || 'download.txt';
+			if (code) {
+				const blob = new Blob([code], { type: 'text/plain' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = filename;
+				a.click();
+				URL.revokeObjectURL(url);
+			}
+			menuDropdown?.classList.add('hidden');
+		}
+
+		document.getElementById('download-btn')?.addEventListener('click', function() {
+			downloadFile(this);
+		});
+
+		document.getElementById('mobile-download-btn')?.addEventListener('click', function() {
+			downloadFile(this);
+		});
+
+		// Delete paste (desktop + mobile)
+		async function deletePaste(btn) {
+			const pasteId = btn?.dataset.id;
+			if (!pasteId) return;
+
+			try {
+				const response = await fetch(`/api/${pasteId}`, {
+					method: 'DELETE',
+					credentials: 'same-origin', // Include session cookie
+				});
+
+				if (response.ok) {
+					window.location.href = '/';
+				} else {
+					const data = await response.json().catch(() => ({}));
+					alert('Failed to delete paste: ' + (data.error || response.statusText));
+				}
+			} catch (err) {
+				alert('Failed to delete paste');
+			}
+		}
+
+		document.getElementById('delete-btn')?.addEventListener('click', function() {
+			deletePaste(this);
+		});
+
+		document.getElementById('mobile-delete-btn')?.addEventListener('click', function() {
+			deletePaste(this);
+		});
+	</script>
+
+	<style is:global>
+		.code-block pre {
+			margin: 0;
+			padding: 1.5rem;
+			overflow-x: auto;
+			font-size: 0.875rem;
+			line-height: 1.625;
+		}
+		.code-block code {
+			font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+		}
+	</style>
+</Layout>

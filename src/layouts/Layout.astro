@@ -1,0 +1,124 @@
+---
+import config, { theme } from '@/lib/config';
+
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { title, description = "A minimal pastebin for code snippets" } = Astro.props;
+const siteUrl = Astro.url.origin;
+const currentUrl = Astro.url.href;
+
+// All themes use local CSS files
+const hljsStylePath = `/styles/hljs-${config.theme}.css`;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/png" href="/favicon.png" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={description} />
+
+		<!-- Highlight.js Theme (local) -->
+		<link rel="stylesheet" href={hljsStylePath} />
+
+		<!-- Open Graph -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={currentUrl} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={`${siteUrl}/og-image.png`} />
+
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={`${siteUrl}/og-image.png`} />
+
+		<title>{title}</title>
+	</head>
+	<body class="bg-paper-bg min-h-screen font-sans text-paper-text flex flex-col">
+		<header class="sm:fixed sm:top-0 sm:left-0 w-full sm:z-50">
+			<div class="max-w-[1600px] mx-auto px-8 py-3 flex items-center justify-between">
+				<a href="/" class="hover:opacity-70 transition-opacity inline-block" aria-label={`${config.name} home`}>
+					<img src={config.logo} alt={config.name} class="h-8 w-auto" loading="eager" />
+				</a>
+				<div class="flex items-center gap-3">
+					<!-- New paste button (only visible when logged in) -->
+					<a id="new-paste-btn" href="/new" class="hover:opacity-70 transition-opacity" title="New paste" style="display: none;">
+						<img src={config.icons.newPaste} alt="New paste" class="h-8 w-auto" loading="eager" />
+					</a>
+					<!-- Auth button: login/logout -->
+					<button id="auth-btn" class="hover:opacity-70 transition-opacity" title="Login" data-login-icon={config.icons.login} data-logout-icon={config.icons.logout}>
+						<img id="auth-img" src={config.icons.login} alt="Login" class="h-8 w-auto" loading="eager" />
+					</button>
+				</div>
+			</div>
+		</header>
+		<script is:inline>
+			(function() {
+				const authBtn = document.getElementById('auth-btn');
+				const authImg = document.getElementById('auth-img');
+				const newPasteBtn = document.getElementById('new-paste-btn');
+				const loginIcon = authBtn.dataset.loginIcon;
+				const logoutIcon = authBtn.dataset.logoutIcon;
+				const isLoggedIn = localStorage.getItem('pbnj_logged_in');
+
+				if (isLoggedIn) {
+					authImg.src = logoutIcon;
+					authImg.alt = 'Logout';
+					authBtn.title = 'Logout';
+					newPasteBtn.style.display = 'block';
+				}
+
+				authBtn.addEventListener('click', async () => {
+					if (localStorage.getItem('pbnj_logged_in')) {
+						// Call logout API to clear session
+						await fetch('/api/auth/logout', { method: 'POST' });
+						localStorage.removeItem('pbnj_logged_in');
+						authImg.src = loginIcon;
+						authImg.alt = 'Login';
+						authBtn.title = 'Login';
+						newPasteBtn.style.display = 'none';
+						// Reload to refresh any auth-dependent content
+						window.location.reload();
+					} else {
+						// Store current page to return after login
+						const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+						window.location.href = '/login?return=' + returnUrl;
+					}
+				});
+			})();
+		</script>
+		<main class="sm:pt-16 px-8 max-w-[1600px] w-full mx-auto flex-1">
+			<slot />
+		</main>
+		{config.footer && (
+			<footer class="py-6 text-center text-paper-muted text-sm">
+				{config.footer.link ? (
+					<a
+						href={config.footer.link}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="hover:text-paper-text transition-colors"
+					>
+						{config.footer.text}
+					</a>
+				) : (
+					<span>{config.footer.text}</span>
+				)}
+			</footer>
+		)}
+	</body>
+</html>
+
+<style is:global>
+	/* Ensure hljs uses theme background */
+	.hljs {
+		padding: 0 !important;
+	}
+</style>

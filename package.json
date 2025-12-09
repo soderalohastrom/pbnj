@@ -1,0 +1,32 @@
+{
+  "name": "pbnj",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "deploy": "npm run build && wrangler d1 execute DB --remote --file=schema/schema.sql && wrangler deploy"
+  },
+  "cloudflare": {
+    "bindings": {
+      "AUTH_KEY": {
+        "type": "secret",
+        "description": "Secret key for authenticating paste creation. Choose a secure random string."
+      }
+    }
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.12",
+    "astro": "^5.16.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "highlight.js": "^11.11.1",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@astrojs/tailwind": "^6.0.2",
+    "tailwindcss": "^3.4.18"
+  }
+}

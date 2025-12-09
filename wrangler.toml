@@ -1,0 +1,30 @@
+name = "pbnj"
+main = "dist/_worker.js/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets
+[assets]
+directory = "./dist"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "pbnj-db"
+database_id = "5311b308-33e6-4488-90f5-4a3ed67078e2"
+
+# Environment variables (set AUTH_KEY in Cloudflare dashboard or .dev.vars locally)
+
+# Observability
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+head_sampling_rate = 1
