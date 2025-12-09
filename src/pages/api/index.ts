@@ -72,6 +72,17 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     const runtime = locals.runtime as any;
 
+    if (!runtime || !runtime.env || !runtime.env.DB) {
+      console.error('Runtime or DB binding not available. locals.runtime:', locals.runtime);
+      return new Response(
+        JSON.stringify({ error: 'Database connection failed - server misconfiguration' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const cursor = parseInt(url.searchParams.get('cursor') || '0');
     const limit = 20;
     const sortDirection = config.sortOrder === 'oldest' ? 'ASC' : 'DESC';
