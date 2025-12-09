@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS pastes (
   language TEXT,
   updated INTEGER NOT NULL,
   filename TEXT,
+  name TEXT,
   is_private INTEGER DEFAULT 0,
   secret_key TEXT
 );
