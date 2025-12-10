@@ -7,7 +7,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "npm run build && wrangler d1 execute DB --remote --file=schema/schema.sql && wrangler d1 execute DB --remote --file=schema/add_name_column.sql && wrangler deploy"
+    "deploy": "npm run build && wrangler d1 execute DB --remote --file=schema/schema.sql && wrangler d1 execute DB --remote --file=schema/fix_schema.sql && wrangler deploy"
   },
   "cloudflare": {
     "bindings": {
