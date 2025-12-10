@@ -2,19 +2,30 @@
 -- SQLite doesn't support ALTER TABLE RENAME COLUMN in older versions,
 -- so we recreate the table
 
--- Create new table with updated column name
+-- Create new table with updated column name and all current columns
 CREATE TABLE pastes_new (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL,
   language TEXT,
   updated INTEGER NOT NULL,
-  expires INTEGER,
-  filename TEXT
+  filename TEXT,
+  name TEXT,
+  is_private INTEGER DEFAULT 0,
+  secret_key TEXT
 );
 
--- Copy data from old table
-INSERT INTO pastes_new (id, code, language, updated, expires, filename)
-SELECT id, code, language, created, expires, filename FROM pastes;
+-- Copy data from old table (handling both old and new schemas)
+INSERT INTO pastes_new (id, code, language, updated, filename, name, is_private, secret_key)
+SELECT
+  id,
+  code,
+  language,
+  COALESCE(updated, created, 0) as updated,
+  filename,
+  name,
+  COALESCE(is_private, 0),
+  secret_key
+FROM pastes;
 
 -- Drop old table
 DROP TABLE pastes;
